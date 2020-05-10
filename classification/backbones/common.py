@@ -2,7 +2,7 @@
 common modules in Pytorch
 """
 
-__all__ = ['conv1x1', 'conv3x3', 'conv1x1_block', 'conv3x3_block']
+__all__ = ['conv1x1', 'conv3x3', 'conv1x1_block', 'conv3x3_block', 'SeLayer']
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -33,8 +33,14 @@ def conv3x3(in_channels, out_channels, stride=1, padding=1, dilation=1, groups=1
 
 
 def conv3x3_dw(channels, stride, use_bias=False):
-    return nn.Conv2d(in_channels=channels, out_channels=channels, kernel_size=3, stride=stride, groups=channels,
-                     bias=use_bias)
+    return nn.Conv2d(
+        in_channels=channels,
+        out_channels=channels,
+        kernel_size=3,
+        stride=stride,
+        groups=channels,
+        bias=use_bias
+    )
 
 
 class Swish(nn.Module):
@@ -118,3 +124,31 @@ def conv3x3_block(in_channels, out_channels, kernel_size=3, padding=1, dilation=
     return ConvBlock(in_channels, out_channels, kernel_size=kernel_size, padding=padding, dilation=dilation,
                      stride=stride, groups=groups, use_bias=use_bias, use_bn=use_bn, bn_eps=bn_eps,
                      activation_name=activation_name)
+
+
+def dwconv3x3_block(channels, kernel_size=3, padding=1, dilation=1, use_bias=False, bn_eps=1e-5,
+                    activation_name='relu'):
+    return ConvBlock(
+        in_channels=channels,
+        out_channels=channels,
+        kernel_size=kernel_size,
+        padding=padding,
+        dilation=dilation,
+        use_bias=use_bias,
+        bn_eps=bn_eps,
+        activation_name=activation_name
+    )
+
+
+class SeLayer(nn.Module):
+    def __init__(self, in_channels, reduction=4):
+        super(SeLayer, self).__init__()
+        mid_channels = in_channels // reduction
+        self.se = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            conv1x1_block(in_channels, mid_channels, activation_name='relu'),
+            conv1x1_block(mid_channels, in_channels, activation_name='hsigmoid')
+        )
+
+    def forward(self, x):
+        return x * self.se(x)
