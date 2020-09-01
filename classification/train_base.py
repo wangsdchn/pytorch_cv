@@ -15,9 +15,12 @@ from tqdm import tqdm
 sys.path.extend('..')
 
 # custom
-from contribs.optimizers_def import create_optimizer
-from contribs.loss import create_criterion
-from contribs.metric import AverageMeter, accuracy
+from contribs.utils.optimizers_def import create_optimizer
+from contribs.utils.loss import create_criterion
+from contribs.utils.metric import AverageMeter, accuracy
+from contribs.utils.lr_scheduler_def import adjust_learning_rate
+from contribs.utils.set_seeds import set_seeds
+from contribs.utils.init_net import init_params
 import classification.dataloader as dataloader
 
 
@@ -42,6 +45,7 @@ class BaseTrainer:
         if self.use_cuda:
             self.model = nn.DataParallel(self.model).cuda()
             self.optimizer = nn.DataParallel(self.optimizer).cuda()
+            self.criterion = nn.DataParallel(self.criterion).cuda()
 
         # logger
         self.writer = SummaryWriter(self.args.logdir)
@@ -49,6 +53,7 @@ class BaseTrainer:
 
     def init_model(self):
         model = models.__dict__[self.args.arch](pretrained=False)
+        init_params(model)
         num_in_feature = model.fc.in_features
         model.fc = nn.Linear(num_in_feature, self.args.num_classes)
         return model
@@ -103,10 +108,14 @@ class BaseTrainer:
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+            if self.args.optimizer_type == 'sgd':
+                adjust_learning_rate(self.optimizer, self.args.base_lr, epoch, self.args.lr_decay_epoch)
             prec1 = accuracy(outputs.data, labels.data, topk=(1,))
             loss = loss.view(-1)
             losses.update(loss.data[0], images.size(0))
             top1.update(prec1[0], images.size(0))
+            self.writer.add_scalar('train/loss', loss.data[0], self.iters)
+            self.writer.add_scalar('train/acc', top1.val, self.iters)
 
             if batch_idx % self.args.log_interval == 0:
                 print('epoch:{}, iter:{}/{}, loss:{}, acc:{}'.format(epoch, batch_idx, self.iters, losses.avg, top1.avg))
@@ -116,8 +125,10 @@ class BaseTrainer:
         self.model.eval()
         top1 = AverageMeter()
         all_result = []
-        for batch_idx, (images, labels, images_path) in enumerate(dataloader):
-            images, labels = images.cuda(), labels.cuda()
+        for batch_idx, data in enumerate(dataloader):
+            images, labels, images_path = data['images'], data['labels'], data['images_path']
+            if self.use_cuda:
+                images, labels = images.cuda(), labels.cuda()
             outputs = self.model(images)
             prec1 = accuracy(outputs.data, labels.data, topk=(1,))
             top1.update(prec1[0], images.size(0))
@@ -162,6 +173,7 @@ def main():
         'optimizer_type': 'adam',
         'loss_type': 'CrossEntropyLoss',
         'base_lr': 0.001,
+        'lr_decay_epoch': 10,
         'beta1': 0.9,
         'beta2': 0.99,
         'momentum': 0.9,
@@ -190,4 +202,5 @@ def main():
 
 
 if __name__ == '__main__':
+    set_seeds(0)
     main()
