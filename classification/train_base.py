@@ -22,6 +22,7 @@ from contribs.utils.lr_scheduler_def import adjust_learning_rate
 from contribs.utils.set_seeds import set_seeds
 from contribs.utils.init_net import init_params
 import classification.dataloader as dataloader
+import classification.backbones as backbones
 
 
 class BaseTrainer:
@@ -29,42 +30,50 @@ class BaseTrainer:
         self.args = args
         os.environ["CUDA_VISIBLE_DEVICES"] = str(self.args.gpu_ids)
         self.acc, self.best_acc = 0.0, 0.0
-        self.model = self.init_model()
-
-        # dataset
-        self.train_dataloader, self.test_dataloader = self.load_dataset()
-
-        # loss
-        self.criterion = create_criterion(self.args)
 
         # cuda
         self.use_cuda = torch.cuda.is_available()
 
-        # optimizer
+        # model relative define
+        self.criterion = create_criterion(self.args)
         self.optimizer = create_optimizer(self.model, self.args)
+        self.model = self.init_model()
         if self.use_cuda:
             self.model = nn.DataParallel(self.model).cuda()
             self.optimizer = nn.DataParallel(self.optimizer).cuda()
             self.criterion = nn.DataParallel(self.criterion).cuda()
+
+        # dataset
+        self.init_transforms()
+        self.init_dataset()
 
         # logger
         self.writer = SummaryWriter(self.args.logdir)
         self.iters = 0
 
     def init_model(self):
-        model = models.__dict__[self.args.arch](pretrained=False)
-        init_params(model)
-        num_in_feature = model.fc.in_features
-        model.fc = nn.Linear(num_in_feature, self.args.num_classes)
+        if self.args.arch_type == 'custom_define':
+            model = backbones.__dict__[self.args.arch](pretrained=False, num_classes=self.args.num_classes)
+        else:
+            model = models.__dict__[self.args.arch](pretrained=False, num_classes=self.args.num_classes)
+            # num_in_feature = model.fc.in_features
+            # model.fc = nn.Linear(num_in_feature, self.args.num_classes)
+        if self.args.checkpoint_pretrained:
+            checkpoint = torch.load(self.args.checkpoint_pretrained)
+            model.load_state_dict(checkpoint['state_dict'])
+            if 'state_dict_optimizer' in checkpoint:
+                self.optimizer.load_state_dict(checkpoint['state_dict_optimizer'])
+        else:
+            init_params(model)
         return model
 
-    def load_dataset(self):
+    def init_transforms(self):
         normalize = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
         transform_train = transforms.Compose([
             transforms.ColorJitter(0.2, 0.2, 0.2, 0.2),
             transforms.RandomHorizontalFlip(),
             transforms.Resize(self.args.image_size + 30),
-            transforms.CenterCrop(self.args.image_size),
+            transforms.RandomCrop(self.args.image_size),
             transforms.ToTensor(),
             normalize
         ])
@@ -73,25 +82,26 @@ class BaseTrainer:
             transforms.ToTensor(),
             normalize
         ])
-        data_init_train = EasyDict({
+        self.data_init_train = EasyDict({
             'data_root': self.args.train_data_path,
             'transforms': transform_train,
         })
-        data_init_test = EasyDict({
+        self.data_init_test = EasyDict({
             'data_root': self.args.test_data_path,
             'transforms': transform_test,
         })
+
+    def init_dataset(self):
         self.dataset = dataloader.__dict__[self.args.dataset_name]
-        train_dataset = self.dataset(data_init_train)
-        test_dataset = self.dataset(data_init_test)
+        train_dataset = self.dataset(self.data_init_train)
+        test_dataset = self.dataset(self.data_init_test)
         if self.args.num_samples == -1:
             self.args.num_samples = len(train_dataset)
         random_sampler = RandomSampler(train_dataset, replacement=True, num_samples=self.args.num_samples)
-        train_dataloader = DataLoader(train_dataset, batch_size=self.args.train_batch_size,
+        self.train_dataloader = DataLoader(train_dataset, batch_size=self.args.train_batch_size,
                                       num_workers=self.args.num_workers, sampler=random_sampler, pin_memory=True)
-        test_dataloader = DataLoader(test_dataset, batch_size=self.args.test_batch_size,
+        self.test_dataloader = DataLoader(test_dataset, batch_size=self.args.test_batch_size,
                                      num_workers=self.args.num_workers, shuffle=False, pin_memory=True)
-        return train_dataloader, test_dataloader
 
     def train(self, epoch):
         self.model.train()
@@ -132,6 +142,7 @@ class BaseTrainer:
             outputs = self.model(images)
             prec1 = accuracy(outputs.data, labels.data, topk=(1,))
             top1.update(prec1[0], images.size(0))
+            self.writer.add_scalar('test/acc', top1.val, self.iters)
 
             if self.args.is_save:
                 probs, preds = outputs.softmax(dim=1).max(dim=1)
@@ -149,8 +160,10 @@ class BaseTrainer:
     def save_chackpoint(self, epoch):
         state = {
             'state_dict': self.model.state_dict(),
+            'state_dict_optimizer': self.optimizer.state_dict(),
             'acc': self.acc,
             'epoch': epoch,
+            'iter': self.iters,
             'args': self.args
         }
         self.args.checkpoint_save_name.parent.mkdir(parents=True, exist_ok=True)
@@ -164,6 +177,7 @@ class BaseTrainer:
 def main():
     args = EasyDict({
         'arch': 'resnet18',
+        'arch_type': 'custom_define',
         'phase': 'train',
         'num_classes': 2,
         'image_size': 224,
@@ -189,6 +203,7 @@ def main():
 
         'logdir': 'train_log/',
         'is_save': True,
+        'checkpoint_pretrained': None,
         'checkpoint_save_name': Path('./checkpoints/model.pth')
     })
     trainer = BaseTrainer(args)
@@ -203,4 +218,4 @@ def main():
 
 if __name__ == '__main__':
     set_seeds(0)
-    main()
+    # main()
