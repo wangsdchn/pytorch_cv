@@ -15,12 +15,12 @@ from tqdm import tqdm
 sys.path.extend('..')
 
 # custom
-from contribs.utils.optimizers_def import create_optimizer
-from contribs.utils.loss import create_criterion
-from contribs.utils.metric import AverageMeter, accuracy
-from contribs.utils.lr_scheduler_def import adjust_learning_rate
-from contribs.utils.set_seeds import set_seeds
-from contribs.utils.init_net import init_params
+from .utils.optimizers_def import create_optimizer
+from .utils.loss_def import create_criterion
+from .utils.metric import AverageMeter, accuracy
+from .utils.lr_scheduler_def import adjust_learning_rate
+from .utils.set_seeds import set_seeds
+from .utils.init_net import init_params
 import classification.dataloader as dataloader
 import classification.backbones as backbones
 

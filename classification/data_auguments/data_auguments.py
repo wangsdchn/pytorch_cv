@@ -4,6 +4,8 @@ from PIL import Image
 import numpy as np
 import random
 
+__all__ = ['RandomDirection', 'RandomQuality']
+
 
 class RandomDirection:
     def __init__(self, directions=[0, 90, 180, 270]):
