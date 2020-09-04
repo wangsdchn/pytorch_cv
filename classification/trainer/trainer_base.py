@@ -67,11 +67,12 @@ class BaseTrainer:
         return model
 
     def _init_transforms(self):
+        padding = int(0.1 * self.args.image_size)
         normalize = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
         self.transform_train = transforms.Compose([
             transforms.ColorJitter(0.2, 0.2, 0.2, 0.2),
             transforms.RandomHorizontalFlip(),
-            transforms.Resize(self.args.image_size + 30),
+            transforms.Resize((self.args.image_size + padding, self.args.image_size + padding)),
             transforms.RandomCrop(self.args.image_size),
             transforms.ToTensor(),
             normalize
@@ -174,10 +175,7 @@ class BaseTrainer:
         torch.save(state, str(self.args.checkpoint_save_name))
         if self.acc > self.best_acc:
             self.best_acc = self.acc
-            best_filepath = str(self.args.checkpoint_save_name).replace('.pth', '_epoch{}_acc{}.pth'.format(epoch,
-                                                                                                            round(
-                                                                                                                self.acc,
-                                                                                                                4)))
+            best_filepath = str(self.args.checkpoint_save_name).replace('.pth', '_epoch{}_acc{}.pth'.format(epoch, round(self.acc, 4)))
             shutil.copyfile(str(self.args.checkpoint_save_name), best_filepath)
 
     def _init_add_args(self):
@@ -208,7 +206,7 @@ class BaseTrainer:
             'test_data_path': Path('dataset/test.txt'),
             'train_batch_size': 4,
             'test_batch_size': 1,
-            'num_workers': 0,
+            'num_workers': 16,
 
             'logdir': 'train_log/',
             'is_save': True,
