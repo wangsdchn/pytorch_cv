@@ -3,8 +3,6 @@ import torch
 from torch.utils.data import Dataset
 from PIL import Image
 
-__all__ = ['ImageFolder']
-
 
 class ImageFolder(Dataset):
     def __init__(self, data_dict):
