@@ -21,5 +21,5 @@ class ImageFolder(Dataset):
         image_path, label = self.image_list[item].strip('\n').split('\t')
         image_pil = Image.open(image_path).convert('RGB')
         image_tensor = self.transforms(image_pil)
-        data = {'images': image_tensor, 'labels': int(label), 'image_path': image_path}
+        data = {'images': image_tensor, 'labels': int(label), 'images_path': image_path}
         return data
