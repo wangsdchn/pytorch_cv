@@ -202,15 +202,15 @@ class BaseTrainer:
             'log_interval': 10,
 
             'dataset_name': 'ImageFolder',
-            'train_data_path': Path('dataset/train.txt'),
-            'test_data_path': Path('dataset/test.txt'),
-            'train_batch_size': 4,
-            'test_batch_size': 1,
+            'train_data_path': Path('dataset/train_cat_dog.txt'),
+            'test_data_path': Path('dataset/test_cat_dog.txt'),
+            'train_batch_size': 512,
+            'test_batch_size': 128,
             'num_workers': 16,
 
-            'logdir': 'train_log/',
+            'logdir': 'train_log_cat_dog/',
             'is_save': True,
             'checkpoint_pretrained': None,
-            'checkpoint_save_name': Path('./checkpoints/model.pth')
+            'checkpoint_save_name': Path('./checkpoints_cat_dog/model.pth')
         })
         print(self.args)

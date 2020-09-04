@@ -2,7 +2,7 @@ import trainer as Trainer
 from utils.set_seeds import set_seeds
 
 def main():
-    trainer_name = 'Cifar10Trainer'
+    trainer_name = 'BaseTrainer'
     trainer = Trainer.__dict__[trainer_name]()
     if trainer.args.phase == 'test':
         trainer.test(epoch=0)

@@ -31,7 +31,7 @@ def make_train_test_txt(image_folder, train_txt, test_txt, test_ratio=0.1, check
 
 
 if __name__ == '__main__':
-    image_folder = Path('/Users/wangshudong/Downloads/dataset/colorization/pixiv/')
-    train_txt = '../dataset/train.txt'
-    test_txt = '../dataset/test.txt'
+    image_folder = Path('/home/work/dataset/public/cat_dog')
+    train_txt = './train_cat_dog.txt'
+    test_txt = './test_cat_dog.txt'
     make_train_test_txt(image_folder, train_txt, test_txt, test_ratio=0.1, check_label=True)
