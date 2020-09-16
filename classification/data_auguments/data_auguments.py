@@ -8,12 +8,28 @@ __all__ = ['RandomDirection', 'RandomQuality']
 
 
 class RandomDirection:
-    def __init__(self, directions=[0, 90, 180, 270]):
+    def __init__(self, directions=None, prob=1.0):
+        if directions is None:
+            directions = [0, 90, 180, 270]
         self.directions = directions
+        self.prob = prob
 
     def __call__(self, image_pil):
-        direction = random.choice(self.directions)
-        image_pil = image_pil.rotate(direction)
+        if np.random.uniform() < self.prob:
+            direction = random.choice(self.directions)
+            image_pil = image_pil.rotate(direction)
+        return image_pil
+
+
+class ChannelsShuffle:
+    def __init__(self, prob=1.0):
+        self.prob = prob
+
+    def __call__(self, image_pil):
+        if np.random.uniform() < self.prob:
+            BGR = cv2.split(np.asarray(image_pil))
+            np.random.shuffle(BGR)
+            image_pil = Image.fromarray(cv2.merge(BGR))
         return image_pil
 
 
