@@ -73,12 +73,12 @@ def make_dataset():
                 image_id = data['id']
                 image_name = data['file_name']
                 new_dict = OrderedDict()
-                new_dict[image_name] = image_name
+                new_dict['image_name'] = image_name
                 if image_id in annotations_dict:
-                    new_dict['info'] = annotations_dict[image_id]
+                    new_dict['objects'] = annotations_dict[image_id]
                 all_data.append('{}\n'.format(json.dumps(new_dict)))
         os.remove(annotations_file)
-        # os.remove(categories_file)
+        os.remove(categories_file)
         os.remove(images_file)
 
         with open('coco_{}.json'.format(item), 'w') as f:

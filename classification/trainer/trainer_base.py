@@ -26,7 +26,7 @@ class BaseTrainer:
     def __init__(self):
         self._init_args()
         self._init_add_args()
-        os.environ["CUDA_VISIBLE_DEVICES"] = str(self.args.gpu_ids)
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(self.args.gpu_ids) # 此设置无效
         self.acc, self.best_acc = 0.0, 0.0
 
         # cuda
@@ -120,7 +120,7 @@ class BaseTrainer:
             outputs = self.model(images)
             loss = self.criterion(outputs, labels)
             self.optimizer.zero_grad()
-            loss.backward()
+            loss.backward(loss.data)
             self.optimizer.step()
             if self.args.optimizer_type == 'sgd':
                 adjust_learning_rate(self.optimizer, self.args.base_lr, epoch, self.args.lr_decay_epoch)
@@ -183,13 +183,13 @@ class BaseTrainer:
 
     def _init_args(self):
         self.args = EasyDict({
-            'arch': 'resnet18',
+            'arch': 'resnet50',
             'arch_type': 'default',  # 'default' or 'custom_define'
             'phase': 'train',
             'num_classes': 2,
             'image_size': 224,
-            'gpu_ids': '0',
-            'total_epochs': 10000,
+            'gpu_ids': '1',
+            'total_epochs': 100000,
             'num_samples': -1,
             'optimizer_type': 'adam',
             'loss_type': 'CrossEntropyLoss',

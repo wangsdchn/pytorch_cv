@@ -1,6 +1,6 @@
 import torch
 import math
-from utils import meshgrid, boxes_nms, boxes_iou, change_box_order
+from detection.retinanet.utils.utils import meshgrid, boxes_nms, boxes_iou, change_box_order
 
 
 class DataEncoder:

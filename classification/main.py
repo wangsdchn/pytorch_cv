@@ -1,9 +1,11 @@
 import trainer as Trainer
+import os
 from utils.set_seeds import set_seeds
 
 def main():
     trainer_name = 'BaseTrainer'
     trainer = Trainer.__dict__[trainer_name]()
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(trainer.args.gpu_ids)
     if trainer.args.phase == 'test':
         trainer.test(epoch=0)
         exit()
